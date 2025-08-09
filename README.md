@@ -1,2 +1,2 @@
 # java-expert-programming
-Java Practice Example to become an expert in Java Programming
+Java Practice Examples to become an expert in Java Programming
