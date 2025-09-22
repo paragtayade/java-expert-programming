@@ -1,0 +1,28 @@
+https://medium.com/@bytecoders/mastering-bookstore-project-ddd-hexagonal-architecture-b898dbbe9d23?sk=a58f5b06707b90aecc3de09ab2c6cfbc
+
+user-management/
+  ├── domain/
+  │     ├── model/
+  │     │     └── User.java
+  │     ├── repository/
+  │     │     └── UserRepository.java
+  │     └── service/
+  │           └── UserDomainService.java
+  ├── application/
+  │     ├── port/
+  │     │     ├── in/
+  │     │     │    ├── CreateUserUseCase.java
+  │     │     │    ├── UpdateUserUseCase.java
+  │     │     │    ├── DeleteUserUseCase.java
+  │     │     │    └── FindUserUseCase.java
+  │     │     └── out/
+  │     │          └── LoadUserPort.java
+  │     └── service/
+  │           └── UserService.java
+  ├── infrastructure/
+  │     ├── repository/
+  │     │     └── UserRepositoryImpl.java
+  │     └── api/
+  │           └── UserController.java
+  └── config/
+        └── UserManagementConfig.java
