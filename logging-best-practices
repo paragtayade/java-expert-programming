@@ -1,0 +1,49 @@
+Logging notes
+
+Best practices for logging in modern applications (Java/Spring and general purpose):
+
+1. Choose the Right Logging Framework
+Use a robust, industry-standard logging framework (e.g., SLF4J + Logback, Log4j2, java.util.logging).
+In Spring Boot, Logback is default and SLF4J is the facade.
+2. Log Levels
+Use appropriate log levels:
+ERROR: For serious problems (e.g., exceptions, failures).
+WARN: For unexpected situations that aren’t fatal.
+INFO: For general application events (startup, shutdown, business events).
+DEBUG: For debugging information, helpful during development.
+TRACE: For very detailed logging (rarely used).
+3. Sensitive Data
+Never log sensitive information (e.g., passwords, secrets, credit card numbers, PII).
+Mask or omit such data before logging.
+4. Contextual Information
+Include contextual info (user ID, request ID, session ID, etc.) to correlate logs.
+Use MDC (Mapped Diagnostic Context) for adding context in multi-threaded apps.
+5. Structured Logging
+Prefer structured logs (JSON format) for better parsing and analysis (especially with ELK/EFK stacks).
+Spring Boot supports JSON log output via Logback extensions.
+6. Consistent Format
+Use a consistent log format (timestamp, level, thread, logger, message).
+Example: [2025-09-23 13:37:20] INFO  [thread-1] com.example.Service - Started successfully
+7. Exception Logging
+Always log the stack trace for exceptions:
+Java
+logger.error("Failed to process request", ex);
+Don’t swallow exceptions silently.
+8. Performance
+Avoid expensive operations in log statements.
+Use parameterized logging:
+Java
+logger.debug("Processing user: {}", userId);
+Don’t log in tight loops unless necessary.
+9. External System Integration
+Integrate with centralized logging solutions (ELK, EFK, Splunk, CloudWatch, etc.).
+Add correlation IDs for tracing across services/microservices.
+10. Configuration and Rotation
+Configure log levels, output paths, and rotation policies.
+Ensure logs don’t fill the disk: use rotation and archival.
+11. Regulatory Compliance
+Ensure logging complies with legal requirements (GDPR, HIPAA, etc.).
+Set retention policies and secure access to log files.
+12. Testing and Review
+Check logs during development and testing for usefulness and clarity.
+Regularly review and prune noisy or redundant log statements.
