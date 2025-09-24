@@ -1,14 +1,10 @@
-/**
- * Efficient Global Exception Handler for Spring Boot
- * Handles all 4xx, 5xx and generic exceptions, masks PII, logs error details, and returns consistent error structure.
- */
-
 package com.example.demo.exception;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.*;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.MDC;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.*;
@@ -28,6 +24,7 @@ import java.util.stream.Collectors;
 /**
  * Efficient Global Exception Handler for Spring Boot
  * Handles all 4xx, 5xx and generic exceptions, masks PII, logs error details, and returns consistent error structure.
+ * Includes MDC.put for trace-id header propagation.
  */
 @RestControllerAdvice
 @Order(Ordered.HIGHEST_PRECEDENCE)
@@ -40,6 +37,9 @@ public class GlobalExceptionHandler {
     private static final Set<String> PII_FIELDS = new HashSet<>(Arrays.asList(
             "password", "ssn", "creditCard", "email", "phone", "dob"
     ));
+
+    public static final String TRACE_ID_HEADER = "trace-id";
+    public static final String TRACE_ID_MDC_KEY = "traceId";
 
     // ------------ 4xx CUSTOM EXCEPTIONS -------------- //
     @ExceptionHandler(BadRequestException.class)
@@ -154,32 +154,46 @@ public class GlobalExceptionHandler {
         return buildErrorResponse(new InternalServerErrorException("An unexpected error occurred"), request, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
-    // -------------- RESPONSE STRUCTURE & LOGGING ------------------- //
+    // -------------- RESPONSE STRUCTURE & LOGGING / MDC ------------------- //
     private ResponseEntity<ErrorResponse> buildErrorResponse(Exception ex, HttpServletRequest request, HttpStatus status) {
-        String maskedHeaders = maskPIIHeaders(getHeaders(request));
-        String maskedQueryParams = maskPIIParams(request.getParameterMap());
-        String maskedPathParams = maskPIIPathParams(request);
+        try {
+            // Extract trace-id from headers and put in MDC for downstream logging/tracing
+            String traceId = request.getHeader(TRACE_ID_HEADER);
+            if (traceId == null || traceId.isEmpty()) {
+                // Optionally generate a trace-id if not present
+                traceId = UUID.randomUUID().toString();
+            }
+            MDC.put(TRACE_ID_MDC_KEY, traceId);
 
-        ErrorResponse errorResponse = ErrorResponse.builder()
-                .timestamp(LocalDateTime.now())
-                .httpStatus(status.getReasonPhrase())
-                .httpStatusCode(status.value())
-                .message(maskIfPii(ex.getMessage()))
-                .className(ex.getClass().getName())
-                .requestUrl(request.getRequestURL().toString())
-                .requestMethod(request.getMethod())
-                .headers(maskedHeaders)
-                .queryParams(maskedQueryParams)
-                .pathParams(maskedPathParams)
-                .responseMessage(maskIfPii(ex.toString()))
-                .build();
+            String maskedHeaders = maskPIIHeaders(getHeaders(request));
+            String maskedQueryParams = maskPIIParams(request.getParameterMap());
+            String maskedPathParams = maskPIIPathParams(request);
 
-        // Log error details
-        log.error("Error handled: Status: {}, Path: {}, Method: {}, Message: {}, Headers: {}, Query: {}",
-                status.value(), request.getRequestURI(), request.getMethod(), errorResponse.getMessage(),
-                errorResponse.getHeaders(), errorResponse.getQueryParams(), ex);
+            ErrorResponse errorResponse = ErrorResponse.builder()
+                    .timestamp(LocalDateTime.now())
+                    .httpStatus(status.getReasonPhrase())
+                    .httpStatusCode(status.value())
+                    .message(maskIfPii(ex.getMessage()))
+                    .className(ex.getClass().getName())
+                    .requestUrl(request.getRequestURL().toString())
+                    .requestMethod(request.getMethod())
+                    .headers(maskedHeaders)
+                    .queryParams(maskedQueryParams)
+                    .pathParams(maskedPathParams)
+                    .responseMessage(maskIfPii(ex.toString()))
+                    .traceId(traceId)
+                    .build();
 
-        return new ResponseEntity<>(errorResponse, status);
+            // Log error details with traceId in MDC
+            log.error("Error handled: TraceId: {}, Status: {}, Path: {}, Method: {}, Message: {}, Headers: {}, Query: {}",
+                    traceId, status.value(), request.getRequestURI(), request.getMethod(),
+                    errorResponse.getMessage(), errorResponse.getHeaders(), errorResponse.getQueryParams(), ex);
+
+            return new ResponseEntity<>(errorResponse, status);
+        } finally {
+            // Clear MDC to prevent trace leakage across threads
+            MDC.remove(TRACE_ID_MDC_KEY);
+        }
     }
 
     private String getHeaders(HttpServletRequest request) {
@@ -269,5 +283,152 @@ public class GlobalExceptionHandler {
         private String className;
         private String requestMethod;
         private String responseMessage;
+        private String traceId;
     }
 }
+
+
+//----------------------------END-------------------------------//
+
+
+//new file---------------------------------------------------------//
+
+package com.example.demo.exception;
+import lombok.NoArgsConstructor;
+
+@NoArgsConstructor
+public class BadRequestException extends RuntimeException {
+    public BadRequestException(String message) { super(message); }
+}
+
+//new file---------------------------------------------------------//
+
+package com.example.demo.exception;
+import lombok.NoArgsConstructor;
+
+@NoArgsConstructor
+public class UnauthorizedException extends RuntimeException {
+    public UnauthorizedException(String message) { super(message); }
+}
+
+//new file---------------------------------------------------------//
+
+package com.example.demo.exception;
+import lombok.NoArgsConstructor;
+
+@NoArgsConstructor
+public class ForbiddenException extends RuntimeException {
+    public ForbiddenException(String message) { super(message); }
+}
+
+//new file---------------------------------------------------------//
+
+package com.example.demo.exception;
+import lombok.NoArgsConstructor;
+
+@NoArgsConstructor
+public class NotFoundException extends RuntimeException {
+    public NotFoundException(String message) { super(message); }
+}
+
+
+//new file---------------------------------------------------------//
+
+package com.example.demo.exception;
+import lombok.NoArgsConstructor;
+
+@NoArgsConstructor
+public class MethodNotAllowedException extends RuntimeException {
+    public MethodNotAllowedException(String message) { super(message); }
+}
+
+//new file---------------------------------------------------------//
+
+package com.example.demo.exception;
+import lombok.NoArgsConstructor;
+
+@NoArgsConstructor
+public class ConflictException extends RuntimeException {
+    public ConflictException(String message) { super(message); }
+}
+
+
+//new file---------------------------------------------------------//
+
+package com.example.demo.exception;
+import lombok.NoArgsConstructor;
+
+@NoArgsConstructor
+public class RequestTimeoutException extends RuntimeException {
+    public RequestTimeoutException(String message) { super(message); }
+}
+
+
+//new file---------------------------------------------------------//
+
+
+
+package com.example.demo.exception;
+import lombok.NoArgsConstructor;
+
+@NoArgsConstructor
+public class InternalServerErrorException extends RuntimeException {
+    public InternalServerErrorException(String message) { super(message); }
+}
+
+
+//new file---------------------------------------------------------//
+
+package com.example.demo.exception;
+import lombok.NoArgsConstructor;
+
+@NoArgsConstructor
+public class NotImplementedException extends RuntimeException {
+    public NotImplementedException(String message) { super(message); }
+}
+
+
+//new file---------------------------------------------------------//
+
+package com.example.demo.exception;
+import lombok.NoArgsConstructor;
+
+@NoArgsConstructor
+public class BadGatewayException extends RuntimeException {
+    public BadGatewayException(String message) { super(message); }
+}
+
+
+//new file---------------------------------------------------------//
+
+
+package com.example.demo.exception;
+import lombok.NoArgsConstructor;
+
+@NoArgsConstructor
+public class ServiceUnavailableException extends RuntimeException {
+    public ServiceUnavailableException(String message) { super(message); }
+}
+
+//new file---------------------------------------------------------//
+
+
+package com.example.demo.exception;
+import lombok.NoArgsConstructor;
+
+@NoArgsConstructor
+public class GatewayTimeoutException extends RuntimeException {
+    public GatewayTimeoutException(String message) { super(message); }
+}
+
+//new file---------------------------------------------------------//
+
+Notes:
+
+All error response, exception, and logging code now uses Lombok annotations (such as @Data, @Builder, @Slf4j).
+You’ll need Lombok in your build (lombok dependency for Maven/Gradle).
+Error response structure is clean, PII-masked, and consistent for all errors.
+
+
+
+
