@@ -1,49 +1,113 @@
-Logging notes
+package com.example.demo.util;
 
-Best practices for logging in modern applications (Java/Spring and general purpose):
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.extern.slf4j.Slf4j;
+import org.slf4j.MDC;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
-1. Choose the Right Logging Framework
-Use a robust, industry-standard logging framework (e.g., SLF4J + Logback, Log4j2, java.util.logging).
-In Spring Boot, Logback is default and SLF4J is the facade.
-2. Log Levels
-Use appropriate log levels:
-ERROR: For serious problems (e.g., exceptions, failures).
-WARN: For unexpected situations that aren’t fatal.
-INFO: For general application events (startup, shutdown, business events).
-DEBUG: For debugging information, helpful during development.
-TRACE: For very detailed logging (rarely used).
-3. Sensitive Data
-Never log sensitive information (e.g., passwords, secrets, credit card numbers, PII).
-Mask or omit such data before logging.
-4. Contextual Information
-Include contextual info (user ID, request ID, session ID, etc.) to correlate logs.
-Use MDC (Mapped Diagnostic Context) for adding context in multi-threaded apps.
-5. Structured Logging
-Prefer structured logs (JSON format) for better parsing and analysis (especially with ELK/EFK stacks).
-Spring Boot supports JSON log output via Logback extensions.
-6. Consistent Format
-Use a consistent log format (timestamp, level, thread, logger, message).
-Example: [2025-09-23 13:37:20] INFO  [thread-1] com.example.Service - Started successfully
-7. Exception Logging
-Always log the stack trace for exceptions:
-Java
-logger.error("Failed to process request", ex);
-Don’t swallow exceptions silently.
-8. Performance
-Avoid expensive operations in log statements.
-Use parameterized logging:
-Java
-logger.debug("Processing user: {}", userId);
-Don’t log in tight loops unless necessary.
-9. External System Integration
-Integrate with centralized logging solutions (ELK, EFK, Splunk, CloudWatch, etc.).
-Add correlation IDs for tracing across services/microservices.
-10. Configuration and Rotation
-Configure log levels, output paths, and rotation policies.
-Ensure logs don’t fill the disk: use rotation and archival.
-11. Regulatory Compliance
-Ensure logging complies with legal requirements (GDPR, HIPAA, etc.).
-Set retention policies and secure access to log files.
-12. Testing and Review
-Check logs during development and testing for usefulness and clarity.
-Regularly review and prune noisy or redundant log statements.
+import javax.servlet.http.HttpServletRequest;
+import java.util.*;
+
+/**
+ * Utility for consistent, PII-safe, JSON-formatted logging with trace id and request context.
+ */
+@Slf4j
+public final class LogUtil {
+
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+    private static final Set<String> PII_FIELDS;
+    public static final String TRACE_ID_HEADER = "trace-id";
+    public static final String TRACE_ID_MDC_KEY = "traceId";
+
+    static {
+        Set<String> pii = new HashSet<>(Arrays.asList("password", "ssn", "creditCard", "email", "phone", "dob"));
+        PII_FIELDS = Collections.unmodifiableSet(pii);
+    }
+
+    private LogUtil() {}
+
+    /**
+     * Logs a message at the specified log level in JSON format, including trace id, masked path/query params, and URLs.
+     * @param level Log level ("INFO", "WARN", "ERROR", "DEBUG", "TRACE")
+     * @param message The log message
+     */
+    public static void log(String level, String message) {
+        HttpServletRequest request = getCurrentRequest();
+        Map<String, Object> logMap = new LinkedHashMap<>();
+        logMap.put("timestamp", new Date());
+        logMap.put("level", level == null ? null : level.toUpperCase());
+        logMap.put("message", maskIfPii(message));
+        logMap.put("traceId", getTraceId(request));
+        logMap.put("controllerUrl", request == null ? null : request.getRequestURI());
+        logMap.put("callingUrl", request == null ? null : request.getRequestURL().toString());
+        logMap.put("pathParams", maskPIIPathParams(request));
+        logMap.put("queryParams", maskPIIParams(request));
+
+        String jsonLog = toJson(logMap);
+
+        switch (level == null ? "" : level.toUpperCase()) {
+            case "ERROR" -> log.error(jsonLog);
+            case "WARN" -> log.warn(jsonLog);
+            case "INFO" -> log.info(jsonLog);
+            case "DEBUG" -> log.debug(jsonLog);
+            case "TRACE" -> log.trace(jsonLog);
+            default -> log.info(jsonLog);
+        }
+    }
+
+    private static String getTraceId(HttpServletRequest request) {
+        String traceId = MDC.get(TRACE_ID_MDC_KEY);
+        if ((traceId == null || traceId.isEmpty()) && request != null) {
+            traceId = request.getHeader(TRACE_ID_HEADER);
+        }
+        return traceId != null ? traceId : "";
+    }
+
+    private static String maskPIIParams(HttpServletRequest request) {
+        if (request == null) return "{}";
+        Map<String, Object> masked = new HashMap<>();
+        request.getParameterMap().forEach((key, value) ->
+            masked.put(key, PII_FIELDS.contains(key.toLowerCase()) ? "****MASKED****" : Arrays.toString(value))
+        );
+        return toJson(masked);
+    }
+
+    private static String maskPIIPathParams(HttpServletRequest request) {
+        if (request == null) return "{}";
+        Map<String, String> pathVars = (Map<String, String>)
+                request.getAttribute(org.springframework.web.servlet.HandlerMapping.URI_TEMPLATE_VARIABLES_ATTRIBUTE);
+        if (pathVars == null) pathVars = new HashMap<>();
+        Map<String, String> masked = new HashMap<>();
+        for (Map.Entry<String, String> entry : pathVars.entrySet()) {
+            masked.put(entry.getKey(), PII_FIELDS.contains(entry.getKey().toLowerCase()) ? "****MASKED****" : entry.getValue());
+        }
+        return toJson(masked);
+    }
+
+    private static String maskIfPii(String value) {
+        if (value == null) return null;
+        for (String pii : PII_FIELDS) {
+            if (value.toLowerCase().contains(pii)) return "****MASKED****";
+        }
+        return value;
+    }
+
+    private static String toJson(Object obj) {
+        try {
+            return OBJECT_MAPPER.writeValueAsString(obj);
+        } catch (JsonProcessingException e) {
+            return "{}";
+        }
+    }
+
+    private static HttpServletRequest getCurrentRequest() {
+        try {
+            ServletRequestAttributes attrs = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+            return attrs != null ? attrs.getRequest() : null;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+}
