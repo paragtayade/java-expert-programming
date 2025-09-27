@@ -1,0 +1,176 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "ApiResponse API",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/api/response": {
+      "get": {
+        "summary": "Get ApiResponse",
+        "operationId": "getApiResponse",
+        "responses": {
+          "200": {
+            "description": "ApiResponse",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ApiResponse": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "integer"
+          },
+          "limit": {
+            "type": "integer"
+          },
+          "skip": {
+            "type": "integer"
+          },
+          "includes": {
+            "$ref": "#/components/schemas/Includes"
+          }
+        }
+      },
+      "Includes": {
+        "type": "object",
+        "properties": {
+          "Entry": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Entry"
+            }
+          }
+        }
+      },
+      "Entry": {
+        "type": "object",
+        "properties": {
+          "metadata": {
+            "$ref": "#/components/schemas/Metadata"
+          },
+          "sys": {
+            "$ref": "#/components/schemas/Sys"
+          },
+          "fields": {
+            "$ref": "#/components/schemas/Fields"
+          }
+        }
+      },
+      "Metadata": {
+        "type": "object",
+        "properties": {
+          "concepts": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "Sys": {
+        "type": "object",
+        "properties": {
+          "createdAt": { "type": "string", "format": "date-time" },
+          "environment": { "$ref": "#/components/schemas/Environment" },
+          "publishedVersion": { "type": "integer" },
+          "id": { "type": "string" },
+          "type": { "type": "string" },
+          "locale": { "type": "string" },
+          "contentType": { "$ref": "#/components/schemas/ContentType" },
+          "space": { "$ref": "#/components/schemas/Space" },
+          "updatedAt": { "type": "string", "format": "date-time" },
+          "revision": { "type": "integer" }
+        }
+      },
+      "Environment": {
+        "type": "object",
+        "properties": {
+          "sys": { "$ref": "#/components/schemas/SysLink" }
+        }
+      },
+      "ContentType": {
+        "type": "object",
+        "properties": {
+          "sys": { "$ref": "#/components/schemas/SysLink" }
+        }
+      },
+      "Space": {
+        "type": "object",
+        "properties": {
+          "sys": { "$ref": "#/components/schemas/SysLink" }
+        }
+      },
+      "SysLink": {
+        "type": "object",
+        "properties": {
+          "linkType": { "type": "string" },
+          "id": { "type": "string" },
+          "type": { "type": "string" }
+        }
+      },
+      "Fields": {
+        "type": "object",
+        "properties": {
+          "reservationPlatform": { "type": "string" },
+          "reservationUrl": { "type": "string" },
+          "country": { "type": "string" },
+          "bookable": { "type": "string" },
+          "hours": { "$ref": "#/components/schemas/Hours" },
+          "closedStatus": { "type": "string" },
+          "city": { "type": "string" },
+          "postalCode": { "type": "string" },
+          "latlong": { "$ref": "#/components/schemas/LatLong" },
+          "foursquareId": { "type": ["string", "null"] },
+          "url": { "type": "string" },
+          "phone": { "type": "string" },
+          "street": { "type": "string" },
+          "price": { "type": "integer" },
+          "name": { "type": "string" },
+          "closed": { "type": "boolean" },
+          "reservation": { "$ref": "#/components/schemas/ReservationLink" },
+          "state": { "type": "string" }
+        }
+      },
+      "Hours": {
+        "type": "object",
+        "properties": {
+          "hours": {
+            "type": "array",
+            "items": {}
+          }
+        }
+      },
+      "LatLong": {
+        "type": "object",
+        "properties": {
+          "lon": { "type": "number" },
+          "lat": { "type": "number" }
+        }
+      },
+      "ReservationLink": {
+        "type": "object",
+        "properties": {
+          "sys": { "$ref": "#/components/schemas/SysLink" }
+        }
+      }
+    }
+  }
+}
