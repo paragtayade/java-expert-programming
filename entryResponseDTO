@@ -1,0 +1,92 @@
+package com.example.api;
+
+import java.util.List;
+
+public record ApiResponse(
+    int total,
+    int limit,
+    int skip,
+    Includes includes
+) {}
+
+public record Includes(
+    List<Entry> Entry
+) {}
+
+public record Entry(
+    Metadata metadata,
+    Sys sys,
+    Fields fields
+) {}
+
+public record Metadata(
+    List<String> concepts,
+    List<String> tags
+) {}
+
+public record Sys(
+    String createdAt,
+    Environment environment,
+    int publishedVersion,
+    String id,
+    String type,
+    String locale,
+    ContentType contentType,
+    Space space,
+    String updatedAt,
+    int revision
+) {}
+
+public record Environment(
+    SysLink sys
+) {}
+
+public record ContentType(
+    SysLink sys
+) {}
+
+public record Space(
+    SysLink sys
+) {}
+
+public record SysLink(
+    String linkType,
+    String id,
+    String type
+) {}
+
+public record Fields(
+    // For reservation entry
+    String reservationPlatform,
+    String reservationUrl,
+    // For venue entry
+    String country,
+    String bookable,
+    Hours hours,
+    String closedStatus,
+    String city,
+    String postalCode,
+    LatLong latlong,
+    String foursquareId,
+    String url,
+    String phone,
+    String street,
+    Integer price,
+    String name,
+    Boolean closed,
+    ReservationLink reservation,
+    String state
+) {}
+
+public record Hours(
+    List<Object> hours
+) {}
+
+public record LatLong(
+    Double lon,
+    Double lat
+) {}
+
+public record ReservationLink(
+    SysLink sys
+) {}
