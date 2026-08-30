@@ -20,21 +20,25 @@ public class UserController {
         this.userService = userService;
     }
 
+    // Fetch all users.
     @GetMapping
     public List<User> getAllUsers() {
         return userService.getAllUsers();
     }
 
+    // Fetch one user by ID.
     @GetMapping("/{id}")
     public ResponseEntity<User> getUserById(@PathVariable Long id) {
         return ResponseEntity.ok(userService.getUserById(id));
     }
 
+    // Create a new user from the request payload.
     @PostMapping
     public ResponseEntity<User> createUser(@Valid @RequestBody CreateUserRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(userService.createUser(request));
     }
 
+    // Toggle the active flag for an existing user.
     @PatchMapping("/{id}/toggle-active")
     public ResponseEntity<User> toggleActive(@PathVariable Long id) {
         return ResponseEntity.ok(userService.toggleActive(id));
